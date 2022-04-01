@@ -32,6 +32,7 @@ public class JqAjaxServlet7 extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		ArrayList<User> list = new ArrayList<>();
+		System.out.println(list);
 		
 		list.add(new User(1, "유재석", 20, '남'));
 		list.add(new User(2, "한지민", 30, '여'));
