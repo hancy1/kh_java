@@ -2,11 +2,11 @@ package com.uni.member.model.dao;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.List;
 
 import com.uni.member.model.dto.Member;
 
@@ -65,8 +65,7 @@ public class MemberDao {
 				m.setHobby(rset.getString("HOBBY"));
 				m.setEnrollDate(rset.getDate("ENROLLDATE"));
 				list.add(m);
-				
-				
+								
 			}
 			
 		} catch (ClassNotFoundException e) {
@@ -94,11 +93,11 @@ public class MemberDao {
 		
 		Member m = null;
 		Connection conn = null;
-		Statement stmt = null;
+		PreparedStatement pstmt = null; //preparedStatement 로 받기
 		ResultSet rset = null;
 		
-		String sql = "SELECT * FROM MEMBER WHERE USERID = '" +memberId+ "'";
-		
+		String sql = "SELECT * FROM MEMBER WHERE USERID = ?"; //위치홀더 이용해서 입력값을 따로 받음
+	
 		try {
 			//1. JDBC driver 등록처리: 해당 database 벤더 사가 제공하는 클래스 등록
 				Class.forName("oracle.jdbc.driver.OracleDriver");
@@ -110,11 +109,12 @@ public class MemberDao {
 				conn = DriverManager.getConnection("jdbc:oracle:thin:@127.0.0.1:1521:xe", "STUDENT", "STUDENT");
 				System.out.println("conn = " + conn); //성공하면 connection 정보, 실패하면 null값		
 				
-				//3. 쿼리문을 실행할 statement객체 생성
-				stmt = conn.createStatement();
+				//3. 쿼리문을 실행할 Preparestatement객체 생성
+				pstmt = conn.prepareStatement(sql); //인자로 sql(string)을 받기 때문에 위에서 먼저 지정해줘야함
+				pstmt.setString(1, memberId); // 위치홀더(?)에 값 담기
 				
 				//4. 쿼리문 전송, 실행결과를 ResultSet으로 받기
-				rset = stmt.executeQuery(sql);
+				rset = pstmt.executeQuery(); //위에서 sql을 받았기 때문에 여기서 또 안 받아도 됨
 				
 				//5. 받은 결과값을 객체에 옮겨서 저장하기
 				
@@ -145,7 +145,7 @@ public class MemberDao {
 				try {
 					//자원 반납의 순서는 생성의 역순
 					rset.close();
-					stmt.close();
+					pstmt.close();
 					conn.close(); 
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
@@ -158,10 +158,10 @@ public class MemberDao {
 	public ArrayList<Member> selectOne1(String memberName) {
 		ArrayList<Member> list = null;
 		Connection conn = null;
-		Statement stmt = null;
+		PreparedStatement pstmt = null;
 		ResultSet rset = null;
 		
-		String sql = "SELECT * FROM MEMBER WHERE USERNAME = '" +memberName+ "'";
+		String sql = "SELECT * FROM MEMBER WHERE USERNAME LIKE ?";
 		
 		try {
 			//1. JDBC driver 등록처리: 해당 database 벤더 사가 제공하는 클래스 등록
@@ -175,10 +175,11 @@ public class MemberDao {
 				System.out.println("conn = " + conn); //성공하면 connection 정보, 실패하면 null값		
 				
 				//3. 쿼리문을 실행할 statement객체 생성
-				stmt = conn.createStatement();
+				pstmt = conn.prepareStatement(sql);
+				pstmt.setString(1, "%" + memberName + "%"); //LIKE를 사용했기 때문에 와일드카드 % 사용
 				
 				//4. 쿼리문 전송, 실행결과를 ResultSet으로 받기
-				rset = stmt.executeQuery(sql);
+				rset = pstmt.executeQuery();
 				
 				//5. 받은 결과값을 객체에 옮겨서 저장하기
 				list = new ArrayList<Member>(); //list를 새로운 객체로 생성하는 과정가지기 안 하면 null로 인식됨
@@ -211,7 +212,7 @@ public class MemberDao {
 				try {
 					//자원 반납의 순서는 생성의 역순
 					rset.close();
-					stmt.close();
+					pstmt.close();
 					conn.close(); 
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
@@ -225,20 +226,10 @@ public class MemberDao {
 		
 		int result = 0;
 		Connection conn = null;
-		Statement stmt = null;
+		PreparedStatement pstmt = null;
 		//ResultSet rset = null; 인서트는 리절트셋을 반환하지 않기 때문에 해당 객체 불필요
 		
-		String sql = "INSERT INTO MEMBER VALUES ("
-					+"'" + m.getUserId() + "', "
-					+"'" + m.getPassword() +"', "
-					+"'" + m.getUserName() +"', "
-					+"'" + m.getGender() +"', "
-					+ m.getAge() +", "
-					+"'" + m.getEmail() +"', "
-					+"'" + m.getPhone() +"', "
-					+"'" + m.getAddress() +"', "
-					+"'" + m.getHobby() +"', "
-					+ "sysdate )";
+		String sql = "INSERT INTO MEMBER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, sysdate)";
 		
 		System.out.println(sql);
 		
@@ -250,9 +241,20 @@ public class MemberDao {
 			System.out.println("conn = " + conn); //성공하면 connection 정보, 실패하면 null값		
 			
 
-			stmt = conn.createStatement();
+			pstmt = conn.prepareStatement(sql);
 			conn.setAutoCommit(false); //자동으로 커밋되지 않게 함
-			result = stmt.executeUpdate(sql); //업뎃 후 처리한 행의 개수 리턴
+			
+			pstmt.setString(1, m.getUserId());
+			pstmt.setString(2, m.getPassword());
+			pstmt.setString(3, m.getUserName());
+			pstmt.setString(4, m.getGender());
+			pstmt.setInt(5, m.getAge());
+			pstmt.setString(6, m.getEmail());
+			pstmt.setString(7, m.getPhone());
+			pstmt.setString(8, m.getAddress());
+			pstmt.setString(9, m.getHobby());
+
+			result = pstmt.executeUpdate(); //업뎃 후 처리한 행의 개수 리턴
 			
 			if(result>0) conn.commit();
 			else conn.rollback();
@@ -266,7 +268,7 @@ public class MemberDao {
 			e.printStackTrace();
 		} finally {
 			try {
-				stmt.close();
+				pstmt.close();
 				conn.close();				
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -280,15 +282,10 @@ public class MemberDao {
 		
 		int result = 0;
 		Connection conn = null;
-		Statement stmt = null;
+		PreparedStatement pstmt = null;
 		//ResultSet rset = null; 업데이트는 리절트셋을 반환하지 않기 때문에 해당 객체 불필요
 		
-		String sql = "UPDATE MEMBER SET "
-				+ " PASSWORD = '" + m.getPassword() + "' , "
-				+ " EMAIL = '" + m.getEmail() + "' , "
-				+ " PHONE = '" + m.getPhone() + "' , "
-				+ " ADDRESS = '" + m.getAddress() + "' "
-				+ " WHERE USERID = '" + m.getUserId() + "'";
+		String sql = "UPDATE MEMBER SET PASSWORD = ?, EMAIL = ?, PHONE = ?, ADDRESS = ? WHERE USERID = ?";
 										
 		System.out.println(sql);
 		
@@ -299,9 +296,16 @@ public class MemberDao {
 			conn = DriverManager.getConnection("jdbc:oracle:thin:@127.0.0.1:1521:xe", "STUDENT", "STUDENT");
 			System.out.println("conn = " + conn); //성공하면 connection 정보, 실패하면 null값		
 			
-			stmt = conn.createStatement();
+			pstmt = conn.prepareStatement(sql);
 			conn.setAutoCommit(false); //자동으로 커밋되지 않게 함
-			result = stmt.executeUpdate(sql); //업뎃 후 처리한 행의 개수 리턴
+			
+			pstmt.setString(1, m.getPassword());
+			pstmt.setString(2, m.getEmail());
+			pstmt.setString(3, m.getPhone());
+			pstmt.setString(4, m.getAddress());
+			pstmt.setString(5, m.getUserId());			
+			
+			result = pstmt.executeUpdate(); //업뎃 후 처리한 행의 개수 리턴
 			
 			if(result>0) conn.commit();
 			else conn.rollback();
@@ -315,7 +319,7 @@ public class MemberDao {
 			e.printStackTrace();
 		} finally {
 			try {
-				stmt.close();
+				pstmt.close();
 				conn.close();				
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -329,10 +333,10 @@ public class MemberDao {
 		
 		int result = 0;
 		Connection conn = null;
-		Statement stmt = null;
+		PreparedStatement pstmt = null;
 		//ResultSet rset = null; 딜리트는 리절트셋을 반환하지 않기 때문에 해당 객체 불필요
 		
-		String sql = "DELETE FROM MEMBER WHERE USERID = '" + memberId +"'";
+		String sql = "DELETE FROM MEMBER WHERE USERID = ?";
 										
 		System.out.println(sql);
 		
@@ -343,10 +347,12 @@ public class MemberDao {
 			conn = DriverManager.getConnection("jdbc:oracle:thin:@127.0.0.1:1521:xe", "STUDENT", "STUDENT");
 			System.out.println("conn = " + conn); //성공하면 connection 정보, 실패하면 null값		
 			
-
-			stmt = conn.createStatement();
+			pstmt = conn.prepareStatement(sql);
 			conn.setAutoCommit(false); //자동으로 커밋되지 않게 함
-			result = stmt.executeUpdate(sql); //업뎃 후 처리한 행의 개수 리턴
+			
+			pstmt.setString(1, memberId);
+			
+			result = pstmt.executeUpdate(); //업뎃 후 처리한 행의 개수 리턴
 			
 			if(result>0) conn.commit();
 			else conn.rollback();
@@ -360,7 +366,7 @@ public class MemberDao {
 			e.printStackTrace();
 		} finally {
 			try {
-				stmt.close();
+				pstmt.close();
 				conn.close();				
 			} catch (SQLException e) {
 				e.printStackTrace();
